@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+/*Course schema*/
+
+model Programmes {
+  Prog_ID                  String   @id @db.VarChar(10)
+  Prog_Name                String   @db.VarChar(50)
+  Prog_Short_Name          String   @db.VarChar(20)
+  Regulatory_Body_Name     String?  @db.VarChar(50)
+  Regulatory_Body_ShortName String? @db.VarChar(10)
+  University_School        String   @db.VarChar(10)
+  Semester_Annual          Int      @db.SmallInt
+  Min_Duration_in_years    Int      @db.SmallInt
+  Max_Duration_in_years    Int      @db.SmallInt
+
+  Courses                  Courses[]
+
+  @@check(Max_Duration_in_years >= Min_Duration_in_years)
+}
+
+model Courses {
+  Course_ID                String     @id @db.Char(3)
+  Course_Name              String     @db.VarChar(100)
+  Course_Short_Name        String     @db.VarChar(20)
+  Prog_ID                  String     @db.VarChar(10)
+  Semester_Annual          Int        @db.SmallInt
+  Min_Duration_in_years    Int        @db.SmallInt
+  Max_Duration_in_years    Int        @db.SmallInt
+  Total_Semester_Annual    Int        @db.SmallInt
+
+  Programme                Programmes @relation(fields: [Prog_ID], references: [Prog_ID])
+  CourseIntakes            Course_Intake[]
+  CourseSchemes            Course_Scheme[]
+
+  @@check(Max_Duration_in_years >= Min_Duration_in_years)
+}
+
+model Course_Intake {
+  Course_ID   String  @db.Char(3)
+  Acad_Year   Int
+  Intake      Int     @db.SmallInt
+
+  Course      Courses @relation(fields: [Course_ID], references: [Course_ID])
+
+  @@id([Course_ID, Acad_Year])
+  @@check(Intake >= 0)
+}
+
+model Course_Scheme {
+  Scheme_ID              String     @id @db.VarChar(12)
+  Course_ID              String     @db.Char(3)
+  Acad_Year              Int
+  Semester_Annual        Int        @db.SmallInt
+  Min_Duration_in_years  Int        @db.SmallInt
+  Max_Duration_in_years  Int        @db.SmallInt
+  Total_Semester_Annual  Int        @db.SmallInt
+  Min_Credits            Int        @db.SmallInt
+  Max_Credits            Int        @db.SmallInt
+  Regulatory_Body_Name   String?    @db.VarChar(50)
+  Regulatory_Body_ShortName String? @db.VarChar(10)
+  University_School      String     @db.VarChar(10)
+
+  Course                 Courses     @relation(fields: [Course_ID], references: [Course_ID])
+  SubjectMasters         Subject_Master[]
+
+  @@check(Max_Credits >= Min_Credits)
+}
+
+model Subject_Master {
+  Paper_ID            String     @db.VarChar(6)
+  Scheme_ID           String     @db.VarChar(12)
+  Paper_Code          String     @db.VarChar(10)
+  Paper_Name          String     @db.VarChar(100)
+  Credits             Int        @db.SmallInt
+  Type                Int        @db.SmallInt
+  Exam                Int        @db.SmallInt
+  Mode                Int        @db.SmallInt
+  Paper_Group         String?    @db.VarChar(5)
+  Paper_Sub_Group     String?    @db.VarChar(5)
+  Kind                Int        @db.SmallInt
+  Minor_Max_Marks     Int        @db.SmallInt
+  Major_Max_Marks     Int        @db.SmallInt
+  Total_Max_Marks     Int        @db.SmallInt
+  Pass_Marks          Int        @db.SmallInt
+
+  CourseScheme        Course_Scheme @relation(fields: [Scheme_ID], references: [Scheme_ID])
+
+  @@id([Paper_ID, Scheme_ID])
+  @@check(Total_Max_Marks = Minor_Max_Marks + Major_Max_Marks)
+  @@check(Pass_Marks >= 0 && Pass_Marks <= Total_Max_Marks)
+}
