@@ -1,23 +1,36 @@
 'use client';
-
+  
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleType } from './RoleSelection';
-import { AdditionalSignUpFields } from '@/types/role.types';
 
 interface BaseSignUpProps {
   role: RoleType;
-  additionalFields?: AdditionalSignUpFields;
+  additionalFields?: React.ReactNode;
+}
+
+interface SignUpFormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  avatar: string;
+  studentid?: string;
+  facultyid?: string;
+  adminid?: string;
+  [key: string]: string | undefined;
 }
 
 export default function BaseSignUpForm({ role, additionalFields }: BaseSignUpProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SignUpFormData>({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
     avatar: '',
-    ...additionalFields,
+    studentid: '',
+    facultyid: '',
+    adminid: ''
   });
   const [error, setError] = useState('');
   const router = useRouter();
@@ -40,16 +53,22 @@ export default function BaseSignUpForm({ role, additionalFields }: BaseSignUpPro
     }
 
     try {
+      const idField = role.value === 'student' ? 'studentid' : 
+                      role.value === 'faculty' ? 'facultyid' : 
+                      role.value === 'admin' ? 'adminid' : '';
+
+      const payload = {
+        ...formData,
+        role: role.value,
+        [idField]: formData[idField as keyof SignUpFormData] || null
+      };
+
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          role: role.value,
-          ...additionalFields
-        }),
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

@@ -4,16 +4,29 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SignUpForm() {
-  const [formData, setFormData] = useState({
+  type FormData = {
+    name: string;
+    email: string;
+    password: string;
+    role: 'student' | 'faculty' | 'admin';
+    studentid: string;
+    facultyid: string;
+    adminid: string;
+  };
+
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     password: '',
-    role: 'user'
+    role: 'student',
+    studentid: '',
+    facultyid: '',
+    adminid: ''
   });
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -26,12 +39,21 @@ export default function SignUpForm() {
     setError('');
 
     try {
+      const idField = formData.role === 'student' ? 'studentid' : 
+                      formData.role === 'faculty' ? 'facultyid' : 
+                      formData.role === 'admin' ? 'adminid' : '' as const;
+
+      const payload = {
+        ...formData,
+        [idField]: (formData as Record<string, string>)[idField] || null
+      };
+
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

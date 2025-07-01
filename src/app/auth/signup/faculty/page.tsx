@@ -27,7 +27,7 @@ export default function FacultySignUpForm() {
   return (
     <BaseSignUpForm
       role={roles.find(r => r.value === 'faculty')!}
-      additionalFields={{facultyId}}
+      additionalFields={facultyFields}
     />
   );
 }
