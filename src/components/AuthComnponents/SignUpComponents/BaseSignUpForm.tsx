@@ -1,12 +1,11 @@
-'use client';
-  
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { RoleType } from './RoleSelection';
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { RoleType } from "./RoleSelection";
 
 interface BaseSignUpProps {
   role: RoleType;
-  additionalFields?: React.ReactNode;
 }
 
 interface SignUpFormData {
@@ -21,65 +20,75 @@ interface SignUpFormData {
   [key: string]: string | undefined;
 }
 
-export default function BaseSignUpForm({ role, additionalFields }: BaseSignUpProps) {
+export default function BaseSignUpForm({
+  role,
+}: BaseSignUpProps) {
   const [formData, setFormData] = useState<SignUpFormData>({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    avatar: '',
-    studentid: '',
-    facultyid: '',
-    adminid: ''
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    avatar: "",
+    studentid: "",
+    facultyid: "",
+    adminid: "",
   });
-  const [error, setError] = useState('');
+  console.log("Role:",role);
+  const [error, setError] = useState("");
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     try {
-      const idField = role.value === 'student' ? 'studentid' : 
-                      role.value === 'faculty' ? 'facultyid' : 
-                      role.value === 'admin' ? 'adminid' : '';
+      const idField =
+        role.value === "student"
+          ? "studentid"
+          : role.value === "faculty"
+          ? "facultyid"
+          : role.value === "admin"
+          ? "adminid"
+          : "";
 
       const payload = {
         ...formData,
         role: role.value,
-        [idField]: formData[idField as keyof SignUpFormData] || null
+        [idField]: formData[idField as keyof SignUpFormData] || null,
       };
+      console.log("Form data: ", formData);
+      console.log("Payload:", payload)
 
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        setError(errorData.error || 'Registration failed');
+        setError(errorData.error || "Registration failed");
         return;
       }
 
-      router.push('/auth/signin');
+      router.push("/auth/signin");
     } catch (err) {
-      setError('An error occurred during registration');
+      setError("An error occurred during registration");
     }
   };
 
@@ -131,7 +140,9 @@ export default function BaseSignUpForm({ role, additionalFields }: BaseSignUpPro
           />
         </div>
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+          <label
+            htmlFor="confirmPassword"
+            className="block text-sm font-medium mb-1">
             Confirm Password
           </label>
           <input
@@ -157,11 +168,54 @@ export default function BaseSignUpForm({ role, additionalFields }: BaseSignUpPro
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        {additionalFields}
+        {/* Admin */}
+        {role.value==="admin" && <div>
+          <label htmlFor="adminId" className="block text-sm font-medium mb-1">
+            Admin ID
+          </label>
+          <input
+          onChange={handleChange}
+          value={formData.adminid}
+            type="text"
+            id="adminid"
+            name="adminid"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>}
+        {/* Faculty */}
+        {role.value==="faculty" && <div>
+          <label htmlFor="facultyId" className="block text-sm font-medium mb-1">
+            Faculty ID
+          </label>
+          <input
+          onChange={handleChange}
+          value={formData.facultyid}
+            type="text"
+            id="facultyid"
+            name="facultyid"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>}
+        {/* student */}
+        {role.value==="student" && <div>
+          <label htmlFor="studentId" className="block text-sm font-medium mb-1">
+            Student ID
+          </label>
+          <input
+          onChange={handleChange}
+          value={formData.studentid}
+            type="text"
+            id="studentid"
+            name="studentid"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>}
         <button
           type="submit"
-          className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-        >
+          className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
           Sign Up
         </button>
       </form>

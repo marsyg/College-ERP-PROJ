@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-
 import prisma from '@/lib/prisma';
+// import { hash } from 'bcryptjs'; // Optional
 
 export async function POST(request: Request) {
   try {
@@ -9,21 +9,21 @@ export async function POST(request: Request) {
       email,
       password,
       role,
-      studentId,
-      facultyId,
-      adminId,
-      avatar
+      studentid,
+      facultyid,
+      adminid,
+      avatar,
+      name
     } = await request.json();
 
     // Basic validation
-    if (!username || !email || !password || !role) {
+    if (!username || !email || !password || !role ) {
       return NextResponse.json(
         { error: 'All required fields are mandatory' },
         { status: 400 }
       );
     }
 
-    // Check if email is already registered
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -35,58 +35,126 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate role and corresponding ID
-    let userIdField: string | null = null;
-    switch (role) {
-      case 'student':
-        if (!studentId) {
-          return NextResponse.json(
-            { error: 'Student ID is required for student registration' },
-            { status: 400 }
-          );
-        }
-        userIdField = studentId;
-        break;
-      case 'faculty':
-        if (!facultyId) {
-          return NextResponse.json(
-            { error: 'Faculty ID is required for faculty registration' },
-            { status: 400 }
-          );
-        }
-        userIdField = facultyId;
-        break;
-      case 'admin':
-        if (!adminId) {
-          return NextResponse.json(
-            { error: 'Admin ID is required for admin registration' },
-            { status: 400 }
-          );
-        }
-        userIdField = adminId;
-        break;
-      default:
-        return NextResponse.json(
-          { error: 'Invalid role' },
-          { status: 400 }
-        );
-    }
+    let useridField: string;
+    const now = new Date();
+    // const hashedPassword = await hash(password, 10);
+    const hashedPassword = password;
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        passwordhash: password, // In production, hash this password!
-        role,
-        avatar,
-        status: true,
-        createdat: new Date(),
-        updatedat: new Date(),
-        studentid: role === 'student' ? userIdField : null,
-        facultyid: role === 'faculty' ? userIdField : null,
-        adminid: role === 'admin' ? userIdField : null,
-      },
+    const user = await prisma.$transaction(async (tx: typeof prisma) => {
+      let relatedid: string;
+
+      if (role === 'student') {
+        if (!studentid) {
+          throw new Error("Student ID required");
+        }
+        relatedid = studentid;
+
+        const exists = await tx.students.findUnique({
+          where: { student_id: studentid }
+        });
+
+        if (!exists) {
+          await tx.students.create({
+            data: {
+              student_id: studentid,
+              name: username,
+              email,
+              date_of_birth: new Date('2000-01-01'), // Replace
+              admission_date: now,
+              course_id: "", // Replace
+            }
+          });
+        }
+
+        return await tx.user.create({
+          data: {
+            username,
+            email,
+            passwordhash: hashedPassword,
+            role,
+            avatar,
+            status: true,
+            createdat: now,
+            updatedat: now,
+            studentid: relatedid,
+          },
+        });
+      }
+
+      if (role === 'faculty') {
+        if (!facultyid) {
+          throw new Error("Faculty ID required");
+        }
+        relatedid = facultyid;
+
+        const exists = await tx.faculty.findUnique({
+          where: { faculty_id: facultyid }
+        });
+
+        if (!exists) {
+          await tx.faculty.create({
+            data: {
+              faculty_id: facultyid,
+              name: username,
+              email,
+              department: "", // Replace
+              doj: now,
+            }
+          });
+        }
+
+        return await tx.user.create({
+          data: {
+            username,
+            email,
+            passwordhash: hashedPassword,
+            role,
+            avatar,
+            status: true,
+            createdat: now,
+            updatedat: now,
+            facultyid: relatedid,
+          },
+        });
+      }
+
+      if (role === 'admin') {
+        if (!adminid) {
+          throw new Error("Admin ID required");
+        }
+        relatedid = adminid;
+
+        const exists = await tx.admins.findUnique({
+          where: { admin_id: adminid }
+        });
+
+        if (!exists) {
+          await tx.admins.create({
+            data: {
+              admin_id: adminid,
+              name: username,
+              email,
+              doj: now,
+            }
+          });
+        }
+
+        return await tx.user.create({
+          data: {
+            username,
+            email,
+            passwordhash: hashedPassword,
+            role,
+            avatar,
+            status: true,
+            createdat: now,
+            updatedat: now,
+            adminid: relatedid,
+          },
+        });
+      }
+
+      throw new Error('Invalid role');
     });
 
     return NextResponse.json({
@@ -100,10 +168,10 @@ export async function POST(request: Request) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }
