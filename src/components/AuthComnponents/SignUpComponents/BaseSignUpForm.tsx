@@ -1,14 +1,36 @@
 'use client';
-
+  
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { RoleType } from './RoleSelection';
 
-export default function SignUpForm() {
-  const [formData, setFormData] = useState({
-    name: '',
+interface BaseSignUpProps {
+  role: RoleType;
+  additionalFields?: React.ReactNode;
+}
+
+interface SignUpFormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  avatar: string;
+  studentid?: string;
+  facultyid?: string;
+  adminid?: string;
+  [key: string]: string | undefined;
+}
+
+export default function BaseSignUpForm({ role, additionalFields }: BaseSignUpProps) {
+  const [formData, setFormData] = useState<SignUpFormData>({
+    username: '',
     email: '',
     password: '',
-    role: 'user'
+    confirmPassword: '',
+    avatar: '',
+    studentid: '',
+    facultyid: '',
+    adminid: ''
   });
   const [error, setError] = useState('');
   const router = useRouter();
@@ -25,13 +47,28 @@ export default function SignUpForm() {
     e.preventDefault();
     setError('');
 
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     try {
+      const idField = role.value === 'student' ? 'studentid' : 
+                      role.value === 'faculty' ? 'facultyid' : 
+                      role.value === 'admin' ? 'adminid' : '';
+
+      const payload = {
+        ...formData,
+        role: role.value,
+        [idField]: formData[idField as keyof SignUpFormData] || null
+      };
+
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -40,7 +77,6 @@ export default function SignUpForm() {
         return;
       }
 
-      // After successful registration, redirect to sign in page
       router.push('/auth/signin');
     } catch (err) {
       setError('An error occurred during registration');
@@ -49,18 +85,18 @@ export default function SignUpForm() {
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">Sign Up</h2>
+      <h2 className="text-2xl font-bold mb-6">Sign Up as {role.label}</h2>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1">
-            Full Name
+          <label htmlFor="username" className="block text-sm font-medium mb-1">
+            Username
           </label>
           <input
             type="text"
-            id="name"
-            name="name"
-            value={formData.name}
+            id="username"
+            name="username"
+            value={formData.username}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
@@ -95,20 +131,33 @@ export default function SignUpForm() {
           />
         </div>
         <div>
-          <label htmlFor="role" className="block text-sm font-medium mb-1">
-            Role
+          <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+            Confirm Password
           </label>
-          <select
-            id="role"
-            name="role"
-            value={formData.role}
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
+            required
+          />
         </div>
+        <div>
+          <label htmlFor="avatar" className="block text-sm font-medium mb-1">
+            Avatar URL (optional)
+          </label>
+          <input
+            type="url"
+            id="avatar"
+            name="avatar"
+            value={formData.avatar}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {additionalFields}
         <button
           type="submit"
           className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
